@@ -296,6 +296,7 @@
         </button>
     </div>
 </body>
+
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         // --- Logo Upload & Display Logic ---
@@ -363,8 +364,6 @@
 
         if (!data) {
             console.warn("No invoice data found in localStorage. Please generate an invoice first.");
-            // alert("No invoice data found! Please go back and generate an invoice.");
-            // Optionally, display default values or a message on the invoice itself
             displayDefaultValues(); // Call a function to display "N/A" or "0.00"
             return;
         }
@@ -486,14 +485,21 @@
         }
     });
 
-    // PDF download function remains the same
     function downloadPDF() {
         const element = document.getElementById("invoiceContainer");
+        const originalWidth = element.style.width; // Store original width
+        const originalMaxWidth = element.style.maxWidth; // Store original max-width
+
+        // Temporarily set a fixed width for the element to force a desktop-like render
+        // This width should ideally match or be close to the `max-w-6xl` (which is 72rem or 1152px by default in Tailwind)
+        // Let's use a slightly smaller value that fits typical A4 margins well, e.g., 900px
+        element.style.width = '900px'; 
+        element.style.maxWidth = '900px'; 
 
         html2canvas(element, {
-            scale: 2, // Increase scale for better resolution in PDF
-            useCORS: true, // Important for images loaded from data URLs
-            allowTaint: true // Necessary for rendering images from data URLs if not cross-origin
+            scale: 3, // Increased scale for higher resolution
+            useCORS: true, 
+            allowTaint: true 
         }).then((canvas) => {
             const imgData = canvas.toDataURL("image/png");
             const pdf = new jsPDF('p', 'pt', 'a4');
@@ -514,6 +520,10 @@
             }
 
             pdf.save("invoice.pdf");
+
+            // Revert the element's width after canvas generation
+            element.style.width = originalWidth;
+            element.style.maxWidth = originalMaxWidth;
         });
     }
 </script>
