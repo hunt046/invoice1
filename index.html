@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invoice Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="style.css"> </head>
+<body class="bg-gray-100 font-sans leading-normal tracking-normal">
+
+    <nav class="bg-blue-600 text-white shadow-md p-4 flex items-center justify-between relative">
+        <a href="/" class="flex items-center">
+            <span class="font-bold text-xl">Your Logo/Text</span>
+        </a>
+
+        <ul class="hidden md:flex space-x-6 ml-auto">
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">Home</a></li>
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">About</a></li>
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">Get Started</a></li>
+        </ul>
+
+        <button id="hamburgerBtn" class="md:hidden text-white focus:outline-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+        </button>
+
+        <ul
+            id="mobileMenu"
+            class="absolute bg-blue-600 text-white hidden top-12 left-0 w-full flex-col space-y-4 p-4 transition-all duration-300 transform -translate-y-full opacity-0"
+        >
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">Home</a></li>
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">About</a></li>
+            <li><a href="#" class="hover:text-blue-300 transition duration-300">Get Started</a></li>
+        </ul>
+    </nav>
+
+<header class="bg-white p-8 shadow-lg w-full">
+    <div class="text-left w-full space-y-4 mb-8">
+        <input type="text" id="companyName" placeholder="Your Company Name" class="text-black text-4xl font-bold mb-4 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1">
+        
+        <textarea id="companyAddress" rows="2" placeholder="Your Company Address, City, State, ZIP" class="text-gray-600 text-lg w-full resize-y focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1"></textarea>
+        
+        <div class="flex items-center text-gray-600 text-lg">
+            <label for="companyMobile" class="mr-2 hidden sm:block">Mob No.:</label>
+            <input type="text" id="companyMobile" placeholder="+91-1234567890" class="w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1">
+        </div>
+        
+        <div class="flex items-center text-gray-600 text-lg">
+            <label for="companyEmail" class="mr-2 hidden sm:block">E-mail:</label>
+            <input type="email" id="companyEmail" placeholder="info@yourcompany.com" class="w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1">
+        </div>
+        
+        <div class="flex items-center text-gray-600 text-lg">
+            <label for="companyWebsite" class="mr-2 hidden sm:block">Website:</label>
+            <input type="url" id="companyWebsite" placeholder="www.yourcompany.com" class="w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1">
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row justify-between text-gray-700 text-lg space-y-4 lg:space-y-0">
+        <div class="font-semibold lg:w-1/2 flex items-center">
+            <label for="companyGstin" class="mr-2">GSTIN:</label>
+            <input type="text" id="companyGstin" placeholder="YourGSTIN12345" class="font-normal w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-md p-1 -ml-1">
+        </div>
+        <p class="font-semibold lg:w-1/2 lg:text-right" id="gstinDisplay">
+            GST Identification Number: <span class="font-normal" id="gstinPreview">YourGSTIN12345</span>
+        </p>
+    </div>
+</header>
+
+
+
+<!-- customers -->
+ <section class="bg-white p-4 w-full mt-2 rounded-lg shadow-md mb-8">
+    <h2 class="text-blue-600 text-2xl font-bold mb-4 text-center">Customer Details</h2>
+    <form id="customer-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="name" class="block text-gray-700 font-semibold mb-1">Name:</label>
+            <input id="name" type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., John Doe" />
+            <small id="name-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="mob-no" class="block text-gray-700 font-semibold mb-1">Mob No.:</label>
+            <input id="mob-no" type="tel" maxlength="10" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., 9876543210" />
+            <small id="mob-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="email" class="block text-gray-700 font-semibold mb-1">E-mail:</label>
+            <input id="email" type="email" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., customer@example.com" />
+            <small id="email-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="address" class="block text-gray-700 font-semibold mb-1">Address:</label>
+            <input id="address" type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., 123 Main St, Anytown, USA" />
+            <small id="address-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="customer-gstin" class="block text-gray-700 font-semibold mb-1">Customer GSTIN:</label>
+            <input id="customer-gstin" type="text" maxlength="15" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., 27ABCDE1234F5Z" />
+        </div>
+        <div>
+            <label for="invoice-no" class="block text-gray-700 font-semibold mb-1">Invoice No.:</label>
+            <input id="invoice-no" type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., INV-2024-001" />
+            <small id="invoice-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="date" class="block text-gray-700 font-semibold mb-1">Date:</label>
+            <input id="date" type="date" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" />
+            <small id="date-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div>
+            <label for="place-of-supply" class="block text-gray-700 font-semibold mb-1">Place of Supply:</label>
+            <input id="place-of-supply" type="text" class="w-full p-2 border border-gray-300 rounded focus:outline-none focus:ring focus:ring-blue-200" placeholder="e.g., Mumbai" />
+            <small id="place-error" class="text-red-500 text-sm hidden"></small>
+        </div>
+        <div class="col-span-full flex justify-center mt-6 gap-4">
+            <button
+                type="button"
+                id="cancelCustomerInfoBtn"
+                class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-3 px-6 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-gray-400 transition duration-200 ease-in-out"
+            >
+                Cancel
+            </button>
+            <button
+                type="submit"
+                id="saveCustomerInfoBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition duration-200 ease-in-out"
+            >
+                Save Customer Info
+            </button>
+        </div>
+    </form>
+</section>
+
+
+<!-- invoice items  -->
+   <section class="bg-white p-4 w-full mt-2 rounded-lg shadow-md">
+        <h2 class="text-blue-600 text-2xl font-bold mb-4 text-center">Product/Service-wise Details</h2>
+
+        <div id="submission-status-message" class="bg-green-200 text-green-700 p-3 rounded mb-4 hidden">
+            Data submitted successfully!
+        </div>
+
+        <div class="overflow-x-auto">
+            <table id="product-table" class="w-full border border-gray-300 min-w-[1200px]">
+                <thead>
+                    <tr class="bg-blue-100">
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left">Sr. No.</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[20%]">Description</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[10%]">HSN/SAC Code</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">Qty</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">Unit</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">Rate</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">CGST Rate %</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">SGST Rate %</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[8%]">IGST Rate %</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[10%]">Total Sale</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[12%]">Total Amount (Incl. Tax)</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left w-[5%]">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="invoice-items-tbody">
+                    </tbody>
+                <tfoot>
+                    <tr class="bg-blue-100 font-bold">
+                        <td colSpan="9" class="text-right p-2 border">Grand Total (Incl. Tax):</td>
+                        <td id="total-sale-grand-total" class="p-2 border">0.00</td>
+                        <td id="grand-total-including-tax" class="p-2 border">0.00</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        <div class="mt-4 flex justify-start gap-4">
+            <button id="add-item-btn" class="bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+                Add Row
+            </button>
+            <button
+                id="submit-invoice-items-btn"
+                class="bg-green-600 text-white p-2 rounded hover:bg-green-700"
+            >
+                Submit Items
+            </button>
+        </div>
+    </section>
+
+    <!-- tax summary -->
+     
+    <section class="bg-white p-4 w-full mt-2 rounded-lg shadow-md mb-8">
+        <h2 class="text-blue-600 text-2xl font-bold mb-4 text-center">Summary and Amount</h2>
+        <div class="overflow-x-auto">
+            <table id="summary-table" class="w-full border border-gray-300">
+                <thead>
+                    <tr class="bg-blue-100">
+                        <th class="border border-gray-300 text-gray-700 p-2 text-left">Description</th>
+                        <th class="border border-gray-300 text-gray-700 p-2 text-right">Amount (Rs)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="border border-gray-300 p-2 text-gray-700">Invoice Value (Subtotal)</td>
+                        <td id="invoice-value" class="border border-gray-300 p-2 text-gray-700 text-right">0.00</td>
+                    </tr>
+                    <tr id="total-cgst-row" class="hidden">
+                        <td class="border border-gray-300 p-2 text-gray-700">Total CGST</td>
+                        <td id="total-cgst" class="border border-gray-300 p-2 text-gray-700 text-right">0.00</td>
+                    </tr>
+                    <tr id="total-sgst-row" class="hidden">
+                        <td class="border border-gray-300 p-2 text-gray-700">Total SGST</td>
+                        <td id="total-sgst" class="border border-gray-300 p-2 text-gray-700 text-right">0.00</td>
+                    </tr>
+                    <tr id="total-igst-row" class="hidden">
+                        <td class="border border-gray-300 p-2 text-gray-700">Total IGST</td>
+                        <td id="total-igst" class="border border-gray-300 p-2 text-gray-700 text-right">0.00</td>
+                    </tr>
+                    <tr class="bg-blue-100 font-bold">
+                        <td class="border border-gray-300 p-2 text-gray-700 text-right">Grand Total (Rs)</td>
+                        <td id="grand-total-summary" class="border border-gray-300 p-2 text-gray-700 text-right">0.00</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+    <!-- bank  -->
+
+    <section class="bg-white p-6 mt-4 rounded-lg shadow-md border border-gray-200">
+    <div class="flex justify-between items-center mb-5 border-b pb-2">
+        <h2 class="text-blue-700 text-xl font-semibold">Payment Details</h2>
+        <button id="edit-bank-details-btn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">Edit</button>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div>
+            <span class="font-semibold text-gray-800 mr-3">Account Name:</span>
+            <span id="bank-account-name-display" class="text-gray-900">N/A</span>
+            <input type="text" id="bank-account-name-input" class="hidden w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 text-gray-900">
+        </div>
+        <div>
+            <span class="font-semibold text-gray-800 mr-3">Bank Name:</span>
+            <span id="bank-name-display" class="text-gray-900">N/A</span>
+            <input type="text" id="bank-name-input" class="hidden w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 text-gray-900">
+        </div>
+        <div>
+            <span class="font-semibold text-gray-800 mr-3">Account Number:</span>
+            <span id="bank-account-number-display" class="text-gray-900">N/A</span>
+            <input type="text" id="bank-account-number-input" class="hidden w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 text-gray-900">
+        </div>
+        <div>
+            <span class="font-semibold text-gray-800 mr-3">IFSC Code:</span>
+            <span id="ifsc-code-display" class="text-gray-900">N/A</span>
+            <input type="text" id="ifsc-code-input" class="hidden w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 text-gray-900">
+        </div>
+        <div>
+            <span class="font-semibold text-gray-800 mr-3">Branch Name:</span>
+            <span id="branch-name-display" class="text-gray-900">N/A</span>
+            <input type="text" id="branch-name-input" class="hidden w-full p-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-300 text-gray-900">
+        </div>
+    </div>
+    <div class="mt-5 pt-3 border-t text-gray-600 text-sm italic">
+        Please ensure all payments are made to the account details specified above.
+    </div>
+</section>
+
+
+<div class="text-center my-8">
+  <button
+    id="generateInvoiceBtn"
+    class="bg-purple-600 text-white font-bold py-3 px-8 rounded-md shadow-md hover:bg-purple-700 transition"
+  >
+    Generate Invoice
+  </button>
+</div>
+
+
+    <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</body>
+</html>

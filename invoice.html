@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Invoice Preview</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        // 👇 Fix jsPDF global reference
+        window.jsPDF = window.jspdf.jsPDF;
+    </script>
+
+    <style>
+        @media print {
+            html, body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            table {
+                page-break-inside: auto;
+            }
+            tr {
+                page-break-inside: avoid;
+                page-break-after: auto;
+            }
+        }
+
+        /* Base styles for all screens */
+        .invoice-logo-display {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            overflow: hidden;
+            object-fit: cover;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            position: absolute; /* Kept absolute for specific top-left positioning */
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        #invoiceContainer {
+            padding: 2.5rem; /* Base padding */
+            padding-top: 120px; /* Space for logo at the top */
+            position: relative; /* Crucial for absolute positioning of child elements */
+        }
+
+        .invoice-title-area {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-left: 120px; /* Offset for logo space */
+            padding-right: 20px; /* Ensure symmetry if logo is far left */
+        }
+        
+        .info-item {
+            display: flex;
+            margin-bottom: 4px;
+            align-items: baseline;
+        }
+        .info-item strong {
+            width: 120px; /* Default fixed width for labels */
+            flex-shrink: 0;
+            margin-right: 8px;
+        }
+        .info-item span {
+            flex-grow: 1;
+        }
+
+        .company-info-text p {
+            line-height: 1.4;
+        }
+        .company-info-text p.text-lg {
+             margin-bottom: 4px;
+        }
+
+        /* --- Responsive Adjustments --- */
+
+        /* For medium screens (md breakpoint: 768px and up) */
+        @media (min-width: 768px) {
+            #invoiceContainer {
+                padding: 2.5rem; /* Revert to standard padding as grid handles layout */
+                padding-top: 2.5rem; /* No special top padding needed here if layout shifts */
+            }
+
+            .invoice-logo-display {
+                /* On larger screens, the logo can be part of the header flex */
+                position: relative; /* Make it part of the flow */
+                top: auto;
+                left: auto;
+                margin-right: 1.5rem; /* Space between logo and title */
+            }
+
+            /* Adjust header layout for larger screens */
+            .main-header-content { /* New class for the combined header area */
+                display: flex;
+                align-items: center; /* Vertically align logo and title */
+                justify-content: space-between;
+                margin-bottom: 2rem;
+            }
+
+            .invoice-title-area {
+                text-align: center;
+                flex-grow: 1; /* Title takes center space */
+                padding-left: 0; /* Remove offset */
+                padding-right: 0; /* Remove offset */
+            }
+
+            /* Adjust customer/company details grid gap */
+            .grid-details-section {
+                margin-top: 1rem; /* Add some space between main header and these details */
+            }
+        }
+
+
+        /* For small screens (less than 768px, mobile-first adjustments) */
+        @media (max-width: 767px) {
+            .invoice-logo-display {
+                width: 80px; /* Slightly smaller logo on small screens */
+                height: 80px;
+                top: 15px; /* Adjust top padding for smaller logo */
+                left: 15px; /* Adjust left padding for smaller logo */
+            }
+            #invoiceContainer {
+                padding: 1rem; /* Reduce overall padding for smaller screens */
+                padding-top: 100px; /* Adjust top padding based on smaller logo size */
+                border-radius: 1rem; /* Slightly smaller border-radius */
+            }
+            .invoice-title-area {
+                margin-bottom: 1rem; /* Less space between title and details */
+                font-size: 2.5rem; /* Smaller main invoice title */
+                padding-left: 90px; /* Offset for smaller logo */
+            }
+            .invoice-title-area p {
+                font-size: 0.75rem; /* Smaller subtitle */
+            }
+
+            .grid-details-section {
+                gap: 1rem; /* Smaller gap when stacked */
+                padding-bottom: 1rem; /* Less padding below the border */
+            }
+
+            .info-item strong {
+                width: 90px; /* Smaller fixed width for labels on small screens */
+                margin-right: 4px; /* Less space */
+            }
+            .text-sm {
+                font-size: 0.875rem; /* Ensure base font size is reasonable */
+            }
+
+            /* For invoice items table on very small screens, enable horizontal scrolling */
+            .overflow-x-auto table {
+                min-width: 600px; /* Ensure table doesn't compress too much */
+            }
+
+            /* Summary and Bank details stacking is handled by md:grid-cols-3 already */
+            .space-y-12 {
+                --tw-space-y-reverse: 0;
+                margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
+                margin-bottom: calc(1.5rem * var(--tw-space-y-reverse)); /* Reduce large vertical spacing */
+            }
+        }
+
+        /* Extra small screens (less than 480px) if needed for very specific adjustments */
+        @media (max-width: 479px) {
+            .invoice-logo-display {
+                width: 70px;
+                height: 70px;
+                top: 10px;
+                left: 10px;
+            }
+            #invoiceContainer {
+                padding-top: 80px;
+            }
+            .invoice-title-area {
+                font-size: 2rem;
+                padding-left: 80px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-gray-100 to-gray-200 text-gray-800 font-sans p-8">
+
+    <div class="bg-white p-6 shadow-md rounded-lg max-w-6xl mx-auto mb-8 flex items-center justify-between ring-1 ring-gray-300">
+        <div>
+            <h3 class="text-xl font-bold text-gray-700 mb-2">Upload Company Logo</h3>
+            <input type="file" id="logoInput" accept="image/*" class="block w-full text-sm text-gray-500
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-full file:border-0
+                file:text-sm file:font-semibold
+                file:bg-blue-50 file:text-blue-700
+                hover:file:bg-blue-100
+            "/>
+            <p class="text-xs text-gray-500 mt-2">Max 2MB. PNG, JPG, or SVG. It will be stored in your browser.</p>
+        </div>
+        <div class="flex items-center">
+            <img id="logoPreview" src="#" alt="Logo Preview" class="w-24 h-24 object-contain mr-4 border border-gray-200 p-1 rounded-md hidden"/>
+            <button id="clearLogoBtn" class="bg-red-500 hover:bg-red-600 text-white text-sm px-4 py-2 rounded-full shadow-sm hidden">
+                Clear Logo
+            </button>
+        </div>
+    </div>
+
+    <div id="invoiceContainer" class="bg-white p-10 shadow-2xl rounded-3xl max-w-6xl mx-auto space-y-12 ring-1 ring-gray-300">
+        
+        <img id="invoiceCompanyLogo" class="invoice-logo-display hidden" src="#" alt="Company Logo">
+
+        <div class="invoice-title-area">
+            <h1 class="text-5xl font-black text-blue-800 tracking-wide">INVOICE</h1>
+            <p class="text-sm text-gray-500 mt-1">Professional Invoice Summary</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10 border-b pb-8 grid-details-section">
+            
+            <div>
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b pb-2">Company Details</h2>
+                <div class="company-info-text text-sm leading-relaxed">
+                    <p id="companyName" class="text-lg font-semibold text-gray-900 mb-2"></p> <p id="companyAddress" class="text-gray-600 mb-4"></p> <div class="info-item"><strong>Mobile:</strong> <span id="companyMobile"></span></div>
+                    <div class="info-item"><strong>Email:</strong> <span id="companyEmail"></span></div>
+                    <div class="info-item"><strong>Website:</strong> <span id="companyWebsite"></span></div>
+                    <div class="info-item"><strong>GSTIN:</strong> <span id="companyGstin"></span></div>
+                </div>
+            </div>
+
+            <div>
+                <h2 class="text-xl font-bold text-blue-700 mb-4 border-b pb-2">Customer & Invoice Info</h2>
+                <div class="text-sm leading-relaxed">
+                    <div class="info-item"><strong>Name:</strong> <span id="name"></span></div>
+                    <div class="info-item"><strong>Mobile:</strong> <span id="mob-no"></span></div>
+                    <div class="info-item"><strong>Email:</strong> <span id="email"></span></div>
+                    <div class="info-item"><strong>Address:</strong> <span id="address"></span></div>
+                    <div class="info-item"><strong>Customer GSTIN:</strong> <span id="customer-gstin"></span></div>
+                    <div class="info-item"><strong>Invoice No:</strong> <span id="invoice-no"></span></div>
+                    <div class="info-item"><strong>Date:</strong> <span id="date"></span></div>
+                    <div class="info-item"><strong>Place of Supply:</strong> <span id="place-of-supply"></span></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <h2 class="text-xl font-bold text-blue-700 mb-4 border-b pb-2">Invoice Items</h2>
+            <div class="overflow-x-auto rounded-lg shadow ring-1 ring-gray-200">
+                <table class="min-w-full text-sm text-left border-collapse">
+                    <thead class="bg-blue-100 text-gray-800">
+                        <tr>
+                            <th class="p-3 border">#</th>
+                            <th class="p-3 border">Description</th>
+                            <th class="p-3 border">HSN/SAC</th>
+                            <th class="p-3 border text-center">Qty</th>
+                            <th class="p-3 border text-center">Unit</th>
+                            <th class="p-3 border text-right">Rate</th>
+                            <th class="p-3 border text-center">CGST%</th>
+                            <th class="p-3 border text-center">SGST%</th>
+                            <th class="p-3 border text-center">IGST%</th>
+                            <th class="p-3 border text-right">Total Sale</th>
+                            <th class="p-3 border text-right">Total (Incl. Tax)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="invoice-items-tbody" class="bg-white text-gray-700"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+            
+            <div>
+                <h2 class="text-xl font-bold text-blue-700 mb-3 border-b pb-2">Summary</h2>
+                <ul class="space-y-2 text-sm font-medium bg-gray-100 p-4 rounded-xl shadow-inner ring-1 ring-gray-200">
+                    <li class="flex justify-between"><span class="flex-shrink-0 mr-2">Invoice Value:</span> <span class="text-right">₹<span id="invoice-value"></span></span></li>
+                    <li class="flex justify-between"><span class="flex-shrink-0 mr-2">Total CGST:</span> <span class="text-right">₹<span id="total-cgst"></span></span></li>
+                    <li class="flex justify-between"><span class="flex-shrink-0 mr-2">Total SGST:</span> <span class="text-right">₹<span id="total-sgst"></span></span></li>
+                    <li class="flex justify-between"><span class="flex-shrink-0 mr-2">Total IGST:</span> <span class="text-right">₹<span id="total-igst"></span></span></li>
+                    <li class="pt-3 border-t text-lg font-bold flex justify-between"><span class="flex-shrink-0 mr-2">Grand Total:</span> <span class="text-right">₹<span id="grand-total-summary"></span></span></li>
+                </ul>
+            </div>
+
+            <div class="md:col-span-2">
+                <h2 class="text-xl font-bold text-blue-700 mb-3 border-b pb-2">Bank Details</h2>
+                <div class="space-y-2 text-sm font-medium bg-gray-100 p-4 rounded-xl shadow-inner ring-1 ring-gray-200">
+                    <div class="info-item"><strong>Account Name:</strong> <span id="bank-account-name-display"></span></div>
+                    <div class="info-item"><strong>Bank Name:</strong> <span id="bank-name-display"></span></div>
+                    <div class="info-item"><strong>Account Number:</strong> <span id="bank-account-number-display"></span></div>
+                    <div class="info-item"><strong>IFSC Code:</strong> <span id="ifsc-code-display"></span></div>
+                    <div class="info-item"><strong>Branch Name:</strong> <span id="branch-name-display"></span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-12">
+        <button onclick="downloadPDF()" class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3 rounded-full shadow-lg transform hover:scale-105 transition-all duration-300">
+            Download Invoice as PDF
+        </button>
+    </div>
+</body>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // --- Logo Upload & Display Logic ---
+        const logoInput = document.getElementById("logoInput");
+        const logoPreview = document.getElementById("logoPreview");
+        const invoiceCompanyLogo = document.getElementById("invoiceCompanyLogo");
+        const clearLogoBtn = document.getElementById("clearLogoBtn");
+
+        // Load logo from localStorage on page load
+        const storedLogo = localStorage.getItem("companyLogo");
+        if (storedLogo) {
+            logoPreview.src = storedLogo;
+            logoPreview.classList.remove("hidden");
+            invoiceCompanyLogo.src = storedLogo;
+            invoiceCompanyLogo.classList.remove("hidden");
+            clearLogoBtn.classList.remove("hidden");
+        }
+
+        logoInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const base64Image = e.target.result;
+                    localStorage.setItem("companyLogo", base64Image); // Store in localStorage
+                    logoPreview.src = base64Image;
+                    logoPreview.classList.remove("hidden");
+                    invoiceCompanyLogo.src = base64Image;
+                    invoiceCompanyLogo.classList.remove("hidden");
+                    clearLogoBtn.classList.remove("hidden");
+                };
+                reader.readAsDataURL(file); // Read file as Base64
+            } else {
+                // If no file selected, clear current logo display
+                localStorage.removeItem("companyLogo");
+                logoPreview.classList.add("hidden");
+                invoiceCompanyLogo.classList.add("hidden");
+                clearLogoBtn.classList.add("hidden");
+            }
+        });
+
+        clearLogoBtn.addEventListener("click", function() {
+            localStorage.removeItem("companyLogo");
+            logoPreview.src = "#";
+            logoPreview.classList.add("hidden");
+            invoiceCompanyLogo.src = "#";
+            invoiceCompanyLogo.classList.add("hidden");
+            logoInput.value = ""; // Clear the file input
+            clearLogoBtn.classList.add("hidden");
+        });
+        // --- End Logo Logic ---
+
+        // --- Invoice Data Population Logic ---
+        let data = null;
+        try {
+            const storedInvoice = localStorage.getItem("generatedInvoice");
+            if (storedInvoice) {
+                data = JSON.parse(storedInvoice);
+            }
+        } catch (e) {
+            console.error("Error parsing invoice data from localStorage:", e);
+            alert("Error: Corrupted invoice data found. Please regenerate the invoice.");
+            return;
+        }
+
+        if (!data) {
+            console.warn("No invoice data found in localStorage. Please generate an invoice first.");
+            // alert("No invoice data found! Please go back and generate an invoice.");
+            // Optionally, display default values or a message on the invoice itself
+            displayDefaultValues(); // Call a function to display "N/A" or "0.00"
+            return;
+        }
+
+        const { companyData, customerInvoiceDetails, invoiceItems, companyBank } = data;
+
+        // Helper function to safely update text content
+        function updateElementText(id, value) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.textContent = value || "N/A"; // Use "N/A" for missing values
+            } else {
+                console.warn(`Element with ID '${id}' not found.`);
+            }
+        }
+
+        // Fill company details
+        updateElementText("companyName", companyData.name);
+        updateElementText("companyAddress", companyData.address);
+        updateElementText("companyMobile", companyData.mobile_no);
+        updateElementText("companyEmail", companyData.email);
+        updateElementText("companyWebsite", companyData.website);
+        updateElementText("companyGstin", companyData.gstin);
+
+        // Fill customer invoice details
+        updateElementText("name", customerInvoiceDetails.name);
+        updateElementText("mob-no", customerInvoiceDetails.mobile_no);
+        updateElementText("email", customerInvoiceDetails.email);
+        updateElementText("address", customerInvoiceDetails.address);
+        updateElementText("customer-gstin", customerInvoiceDetails.customer_gstin); // Corrected ID assumption
+        updateElementText("invoice-no", customerInvoiceDetails.invoice_no);
+        updateElementText("date", customerInvoiceDetails.date);
+        updateElementText("place-of-supply", customerInvoiceDetails.place_of_supply);
+
+        // Fill bank details
+        updateElementText("bank-account-name-display", companyBank.bankAccountName);
+        updateElementText("bank-name-display", companyBank.bankName);
+        updateElementText("bank-account-number-display", companyBank.bankAccountNumber);
+        updateElementText("ifsc-code-display", companyBank.ifscCode);
+        updateElementText("branch-name-display", companyBank.branchName);
+
+        // Render invoice items
+        let totalSale = 0, totalInclTax = 0, totalCgst = 0, totalSgst = 0, totalIgst = 0;
+        const tbody = document.getElementById("invoice-items-tbody");
+        tbody.innerHTML = ''; // Clear existing rows before populating
+
+        if (invoiceItems && invoiceItems.length > 0) {
+            invoiceItems.forEach((item, index) => {
+                const row = document.createElement("tr");
+                row.classList.add(index % 2 === 0 ? "bg-white" : "bg-gray-50");
+
+                // Ensure numeric values are numbers, default to 0 if not present
+                const quantity = parseFloat(item.quantity) || 0;
+                const rate = parseFloat(item.rate) || 0;
+                const cgstRate = parseFloat(item.cgstRate) || 0;
+                const sgstRate = parseFloat(item.sgstRate) || 0;
+                const igstRate = parseFloat(item.igstRate) || 0;
+
+                // Recalculate totals to be safe, or use item.totalSale etc if they are reliable
+                const itemTotalSale = quantity * rate;
+                const cgstAmount = itemTotalSale * (cgstRate / 100);
+                const sgstAmount = itemTotalSale * (sgstRate / 100);
+                const igstAmount = itemTotalSale * (igstRate / 100);
+                const itemTotalAmountIncludingTax = itemTotalSale + cgstAmount + sgstAmount + igstAmount;
+
+                row.innerHTML = `
+                    <td class="border border-gray-300 p-2 text-left">${index + 1}</td>
+                    <td class="border border-gray-300 p-2 text-left">${item.description || 'N/A'}</td>
+                    <td class="border border-gray-300 p-2 text-left">${item.hsnSacCode || 'N/A'}</td>
+                    <td class="border border-gray-300 p-2 text-center">${quantity.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-center">${item.unit || 'N/A'}</td>
+                    <td class="border border-gray-300 p-2 text-right">${rate.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-center">${cgstRate.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-center">${sgstRate.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-center">${igstRate.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-right">${itemTotalSale.toFixed(2)}</td>
+                    <td class="border border-gray-300 p-2 text-right">${itemTotalAmountIncludingTax.toFixed(2)}</td>
+                `;
+
+                tbody.appendChild(row);
+
+                totalSale += itemTotalSale;
+                totalInclTax += itemTotalAmountIncludingTax;
+                totalCgst += cgstAmount;
+                totalSgst += sgstAmount;
+                totalIgst += igstAmount;
+            });
+        } else {
+            // Display a message if no items are present
+            const noItemsRow = document.createElement("tr");
+            noItemsRow.innerHTML = `<td colspan="11" class="border border-gray-300 p-4 text-center text-gray-500">No invoice items added.</td>`;
+            tbody.appendChild(noItemsRow);
+        }
+
+        // Display totals
+        updateElementText("invoice-value", totalSale.toFixed(2));
+        updateElementText("total-cgst", totalCgst.toFixed(2));
+        updateElementText("total-sgst", totalSgst.toFixed(2));
+        updateElementText("total-igst", totalIgst.toFixed(2));
+        updateElementText("grand-total-summary", totalInclTax.toFixed(2));
+
+        function displayDefaultValues() {
+            // Function to set default "N/A" or "0.00" for all fields if data is missing
+            document.querySelectorAll("#invoiceContainer [id]").forEach(el => {
+                if (el.tagName !== "IMG" && el.tagName !== "INPUT" && el.textContent === "") {
+                    // Exclude images and input fields, only target empty text content
+                    if (el.id.includes("total") || el.id.includes("value") || el.id.includes("grand-total")) {
+                         el.textContent = "0.00";
+                    } else {
+                        el.textContent = "N/A";
+                    }
+                }
+            });
+            const tbody = document.getElementById("invoice-items-tbody");
+            tbody.innerHTML = '';
+            const noItemsRow = document.createElement("tr");
+            noItemsRow.innerHTML = `<td colspan="11" class="border border-gray-300 p-4 text-center text-gray-500">No invoice items to display.</td>`;
+            tbody.appendChild(noItemsRow);
+        }
+    });
+
+    // PDF download function remains the same
+    function downloadPDF() {
+        const element = document.getElementById("invoiceContainer");
+
+        html2canvas(element, {
+            scale: 2, // Increase scale for better resolution in PDF
+            useCORS: true, // Important for images loaded from data URLs
+            allowTaint: true // Necessary for rendering images from data URLs if not cross-origin
+        }).then((canvas) => {
+            const imgData = canvas.toDataURL("image/png");
+            const pdf = new jsPDF('p', 'pt', 'a4');
+            const imgWidth = 595.28; // A4 width in points
+            const pageHeight = 841.89; // A4 height in points
+            const imgHeight = canvas.height * imgWidth / canvas.width;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+
+            while (heightLeft > 0) {
+                position = heightLeft - imgHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+            }
+
+            pdf.save("invoice.pdf");
+        });
+    }
+</script>
+
+</html>
